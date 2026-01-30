@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.pedropathing.follower.Follower;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -7,6 +8,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 public class ShootSystem {
     public DcMotorEx flywheelLeft;
@@ -16,19 +18,19 @@ public class ShootSystem {
     private DcMotor intakeSide;
     private DcMotor leftServo;
     private DcMotor rightServo;
-
+    private Follower fol;
     private Servo flipR;
     private Servo flipL;
 
     private final Telemetry telemetry;
-    public static double kP = 0.004; // This should be fine
-    public static double kS = 0.02; // This should be fine
-    public static double kV = 0.00045; // Tune this so targetTPS almost reaches speed without kP
+    public static double kP = 0.004; // was 0.003
+    public static double kS = 0.02;
+    public static double kV = 0.00045;
     private final VoltageSensor battery;
 
-    public ShootSystem(HardwareMap hardwareMap, Telemetry telemetry){
+    public ShootSystem(HardwareMap hardwareMap, Telemetry telemetry, Follower follower){
         this.telemetry = telemetry;
-
+        this.fol = follower;
         flywheelLeft = hardwareMap.get(DcMotorEx.class, "SR");
         flywheelRight = hardwareMap.get(DcMotorEx.class, "SL");
         intakeFront = hardwareMap.get(DcMotor.class, "IF");
@@ -36,6 +38,8 @@ public class ShootSystem {
 
         flipR = hardwareMap.get(Servo.class, "flipR");
         flipL = hardwareMap.get(Servo.class, "flipL");
+        flipL.setDirection(Servo.Direction.REVERSE);
+
 
         flywheelLeft.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
         flywheelRight.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
@@ -67,7 +71,7 @@ public class ShootSystem {
         double fb = kP * error;
 
 
-        double power = (ff + fb) * (12.0 / currentVoltage);
+        double power = (ff + fb);
 
         double finalPower = Math.max(-1, Math.min(1, power));
 
@@ -95,12 +99,9 @@ public class ShootSystem {
             double currentTPS = (flywheelLeft.getVelocity() + flywheelRight.getVelocity()) / 2.0;
 
 
-            if (Math.abs(targetTPS - currentTPS) < 60) {
-                RunBelt(.6);
-            } else {
 
-                stopBelt();
-            }
+
+
         }
 
 
@@ -129,13 +130,15 @@ public class ShootSystem {
 
     public void gateOpen(){
         flipR.setPosition(0.48);
-        flipL.setPosition(0.56);
+        flipL.setPosition(0.48);
     }
 
     public void gateClose(){
         flipR.setPosition(0.2);
         flipL.setPosition(0.2);
     }
+
+
 
 
 

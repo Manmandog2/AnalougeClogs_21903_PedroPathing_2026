@@ -18,6 +18,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelLogic;
+import org.firstinspires.ftc.teamcode.subsystems.ShootSystem;
 
 
 @Autonomous(name = "FarBlueT", group = "autonomous")
@@ -27,19 +28,15 @@ public class FarBlueT extends OpMode {
     private Timer pathTimer, opmodeTimer; // Game timer
 
     // flywheel setup
-    private FlywheelLogic shooter = new FlywheelLogic();
 
+    private ShootSystem shooter;
     private boolean shotstriggered = false;
 
 
 
     private int pathState; // Current path #
-    private void setPathState(int num) {
+    private void setPathState(int num){
         pathState = num;
-        pathTimer.resetTimer();
-
-        shotstriggered = false;
-
     }
 
     private int chainNum;
@@ -73,11 +70,12 @@ public class FarBlueT extends OpMode {
     private double downPos = 0.59;
 
     // TIMER VARS
-    private ElapsedTime feedTimer;
+    private ElapsedTime shootTimer;
     private double intakeDur = 600;
 
 
-    private ElapsedTime botTimer = new ElapsedTime();
+
+
     private double botDur = 1650;
     private boolean firing = false;
     private boolean doneShooting;
@@ -129,10 +127,9 @@ public class FarBlueT extends OpMode {
 //        Floor.scaleRange(upPos, downPos);
 //        Floor.setPosition(.59);
 
-        shooter.init(hardwareMap);
-
+        shooter = new ShootSystem(hardwareMap, telemetry, fol);
         // TIMER INIT
-        feedTimer = new ElapsedTime();
+        shootTimer = new ElapsedTime();
 
         // PATH INIT
         pathTimer = new Timer();
@@ -140,15 +137,13 @@ public class FarBlueT extends OpMode {
         opmodeTimer.resetTimer();
 
 
-        buildPaths(0);
+        buildPaths();
         setPathState(1);
 
     }
 
 
-
-
-    public void buildPaths(int obNum) {
+    public void buildPaths() {
 
         pathPreScore = fol.pathBuilder()
                 .addPath(new BezierLine(startPose, preScorePose))
@@ -183,36 +178,27 @@ public class FarBlueT extends OpMode {
 
 
     public void autonomousPathUpdate() {
-
         switch (pathState) {
-
             case 1:
+                fol.followPath(pathPreScore);
+                fol.setMaxPower(1);
+                setPathState(100);
+                break;
+
+            case 100:
                 if (!fol.isBusy()) {
-                    fol.followPath(pathPreScore);
-                    runBelt(.5);
-                    if (!shotstriggered) {
-                        shooter.fireShots(3);
-                        shotstriggered = true;
-                    }
-                    else if (shotstriggered && !shooter.isBusy()) {
-                        fol.setMaxPower(1);
-                        setPathState(2);
-                    }
+                    shootTimer.reset();
+                    setPathState(2);
                 }
                 break;
 
             case 2:
-                if (!fol.isBusy()) {
-                    botTimer.reset();
-                    runBelt(0);
-
-                            setPathState(3);
-                }
+                shootFar(3);
                 break;
 
 
             case 3:
-                if (!fol.isBusy() && pathState == 3) {
+                if (!fol.isBusy()) {
                     fol.followPath(pathRow1Line);
                     setPathState(4);
                 }
@@ -258,12 +244,64 @@ public class FarBlueT extends OpMode {
     public void loop() {
 
         fol.update();
-        shooter.update();
         autonomousPathUpdate();
 
 
     }
 
+    public void shootFar(int nextState){
+        shooter.shoot(1525);
 
+//        if (shootTimer.milliseconds() > 1200) {
+//            shooter.gateOpen();
+//        } else {
+//            shooter.gateClose();
+//        }
+
+//        if (shootTimer.milliseconds() < 500) {
+//            shooter.stopBelt();
+//        }
+
+
+      if (Math.abs(shooter.flywheelRight.getVelocity()) >= 1500 || shootTimer.milliseconds() > 1200) {
+          shooter.gateOpen();
+          shooter.RunBelt(0.12);
+        }
+
+        if (shootTimer.milliseconds() > 4000) {
+            shooter.StopMotors();
+            shooter.gateClose();
+            setPathState(nextState);
+        }
+    }
+
+//    private void shoot(int nextState) {
+//        // updates and sets motors to power
+//        shooter.Shoot();
+//
+//        if (shootTimer.milliseconds() > 900) {
+//            shooter.feeder.setPosition(FeedBackShootSystem.closePos);
+//        } else {
+//            shooter.feeder.setPosition(FeedBackShootSystem.openPos);
+//        }
+//
+//        // lets the flywheel spin up for a bit might need to make bigger
+//        if (shootTimer.milliseconds() < 500) {
+//            shooter.stopBelt();
+//        }
+//
+//        // after that checks if the flywheel is at the velocity or if we have spun for over 3 seconds
+//        else if (Math.abs(shooter.shootVel - shooter.flywheel.getVelocity()) < 50 || shootTimer.milliseconds() > 700) {
+//            shooter.RunBelt(0.8);
+//
+//        }
+//
+//        // After 4 seconds stop everything and move to the next path state incase sum gets messed up
+//        if (shootTimer.milliseconds() > 1900) {
+//            shooter.StopMotors();
+//            shooter.feeder.setPosition(FeedBackShootSystem.openPos);
+//            setPathState(nextState);
+//        }
+//    }
 
 }
