@@ -77,10 +77,11 @@ public class ShootSystem {
 
         telemetry.addData("Target TPS", targetTPS);
         telemetry.addData("Current TPS", currentTPS);
+        telemetry.addData("Current Error", error);
+        telemetry.update();
     }
 
 
-    public class FeedBackShootSystem {
 
         public double VELO_TOLERANCE = 60;
 
@@ -106,7 +107,7 @@ public class ShootSystem {
         public void spinUp(double targetTPS) {
             updateFlywheelControl(targetTPS);
         }
-    }
+
 
 
     public void RunBelt(double speed) {
@@ -125,6 +126,17 @@ public class ShootSystem {
         stopBelt();
         //angleAdjuster.setPosition(0.15);
     }
+
+    public void gateOpen(){
+        flipR.setPosition(0.48);
+        flipL.setPosition(0.56);
+    }
+
+    public void gateClose(){
+        flipR.setPosition(0.2);
+        flipL.setPosition(0.2);
+    }
+
 
 
 }
