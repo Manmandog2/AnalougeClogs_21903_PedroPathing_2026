@@ -44,20 +44,22 @@ public class CloseBlue extends OpMode {
     private int shootPos = 1;
 
 
-    private final Pose startPose = new Pose(56, 8, Math.toRadians(90));
-    private final Pose preScorePose = new Pose(59, 21, Math.toRadians(112));
-    private final Pose row1Line = new Pose(8, 25, Math.toRadians(270));
-    private final Pose row1Grab = new Pose(9, 9, Math.toRadians(270));
+    private final Pose startPose = new Pose(18, 119, Math.toRadians(144));
+    private final Pose preScorePose = new Pose(48, 97, Math.toRadians(135));
 
-    private final Pose row1Score = new Pose(48, 97, Math.toRadians(320));
+    private final Pose row1Line = new Pose(50, 83, Math.toRadians(180));
+    private final Pose row1Grab = new Pose(16, 83, Math.toRadians(180));
+    private final Pose row1Score = new Pose(48, 97, Math.toRadians(135));
 
+    private final Pose row2Line = new Pose(48, 60, Math.toRadians(180));
+    private final Pose row2Grab = new Pose(15, 59, Math.toRadians(184));
+    private final Pose row2Score = new Pose(48, 97, Math.toRadians(135));
 
-    private final Pose parkPose = new Pose(62, 37, Math.toRadians(270));
+    private final Pose parkPose = new Pose(62, 70, Math.toRadians(135));
 
 
     private DcMotorEx SR;
     private DcMotorEx SL;
-    private DcMotor IF;
     private DcMotor IS;
 
     private Servo flipL;
@@ -66,8 +68,8 @@ public class CloseBlue extends OpMode {
 
 
     // SERVO VARS
-    private double upPos = 0.88;
-    private double downPos = 0.59;
+//    private double upPos = 0.88;
+//    private double downPos = 0.59;
 
     // TIMER VARS
     private ElapsedTime shootTimer;
@@ -81,7 +83,7 @@ public class CloseBlue extends OpMode {
     private boolean doneShooting;
 
 
-    private PathChain pathPreScore, pathRow1Line, pathRow1Grab, pathRow1Score, pathParkPose;
+    private PathChain pathPreScore, pathRow1Line, pathRow1Grab, pathRow1Score, pathRow2Line, pathRow2Grab, pathRow2Score, pathParkPose;
 
 
     @Override
@@ -92,7 +94,6 @@ public class CloseBlue extends OpMode {
 
         SL = hardwareMap.get(DcMotorEx.class, "SL");
         SR = hardwareMap.get(DcMotorEx.class, "SR");
-        IF = hardwareMap.get(DcMotor.class, "IF");
         IS = hardwareMap.get(DcMotor.class, "IS");
 
         flipL = hardwareMap.get(Servo.class, "flipL");
@@ -111,11 +112,7 @@ public class CloseBlue extends OpMode {
         SR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         SR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        MotorConfigurationType configIF = IF.getMotorType().clone();
-        configIF.setAchieveableMaxRPMFraction(1.0);
-        IF.setMotorType(configIF);
-        IF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        IF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
 
         MotorConfigurationType configIS = IS.getMotorType().clone();
         configIS.setAchieveableMaxRPMFraction(1.0);
@@ -161,19 +158,30 @@ public class CloseBlue extends OpMode {
                 .setLinearHeadingInterpolation(row1Line.getHeading(), row1Grab.getHeading())
                 .build();
 
-
         pathRow1Score = fol.pathBuilder()
                 .addPath(new BezierCurve(row1Grab, row1Score))
                 .setLinearHeadingInterpolation(row1Grab.getHeading(), row1Score.getHeading())
                 .build();
 
-
-
-        pathParkPose = fol.pathBuilder()
-                .addPath(new BezierLine(row1Grab, parkPose))
-                .setLinearHeadingInterpolation(row1Grab.getHeading(), parkPose.getHeading())
+        pathRow2Line = fol.pathBuilder()
+                .addPath(new BezierLine(row1Score, row2Line))
+                .setLinearHeadingInterpolation(row1Score.getHeading(), row2Line.getHeading())
                 .build();
 
+        pathRow1Grab = fol.pathBuilder()
+                .addPath(new BezierLine(row2Line, row2Grab))
+                .setLinearHeadingInterpolation(row2Line.getHeading(), row2Grab.getHeading())
+                .build();
+
+        pathRow2Score = fol.pathBuilder()
+                .addPath(new BezierLine(row2Grab, row2Score))
+                .setLinearHeadingInterpolation(row2Grab.getHeading(), row2Score.getHeading())
+                .build();
+
+        pathParkPose = fol.pathBuilder()
+                .addPath(new BezierLine(row2Score, parkPose))
+                .setLinearHeadingInterpolation(row2Score.getHeading(), parkPose.getHeading())
+                .build();
     }
 
 
@@ -196,7 +204,6 @@ public class CloseBlue extends OpMode {
                 shootClose(3);
                 break;
 
-
             case 3:
                 if (!fol.isBusy()) {
                     fol.followPath(pathRow1Line);
@@ -204,29 +211,77 @@ public class CloseBlue extends OpMode {
                 }
                 break;
 
+            case 4:
+                if (!fol.isBusy()) {
+                    runBelt(.8);
+                    fol.setMaxPower(.6);
+                    fol.followPath(pathRow1Grab);
+                    setPathState(7);
+                }
+                break;
 
-//            case 4:
-//                if (!fol.isBusy()) {
-//                    runBelt(.5);
-//                    fol.setMaxPower(.485);
-//                    fol.followPath(pathRow1Grab);
-//                    setPathState(5);
-//
-//
-//
-//                }
-//                break;
-//
-//
-//            case 5:
-//                if (!fol.isBusy()) {
-//                    fol.setMaxPower(1);
-//                    runBelt(0);
-//                    fol.followPath(pathParkPose);
-//                    setPathState(6);
-//                }
-//                break;
+            case 7:
+                if (!fol.isBusy()) {
+                    fol.setMaxPower(1);
+                    fol.followPath(pathRow1Score);
+                    setPathState(8);
+                }
+                break;
 
+            case 8:
+                if (!fol.isBusy()) {
+                    shootTimer.reset();
+                    setPathState(9);
+                }
+                break;
+
+            case 9:
+                shootClose(50);
+                break;
+
+            case 50:
+                if (!fol.isBusy()) {
+                    fol.followPath(pathRow2Line);
+                    setPathState(40);
+                }
+                break;
+
+            case 40:
+                if (!fol.isBusy()) {
+                    runBelt(.8);
+                    fol.setMaxPower(.6);
+                    fol.followPath(pathRow2Grab);
+                    setPathState(70);
+                }
+                break;
+
+            case 70:
+                if (!fol.isBusy()) {
+                    fol.setMaxPower(1);
+                    fol.followPath(pathRow2Score);
+                    setPathState(80);
+                }
+                break;
+
+            case 80:
+                if (!fol.isBusy()) {
+                    shootTimer.reset();
+                    setPathState(90);
+                }
+                break;
+
+            case 90:
+                shootClose(5);
+                break;
+
+            case 5:
+                if (!fol.isBusy()) {
+                    fol.setMaxPower(1);
+                    runBelt(0);
+                    fol.followPath(pathParkPose);
+                    setPathState(6);
+                }
+                break;
 
         }
 
@@ -234,9 +289,7 @@ public class CloseBlue extends OpMode {
 
 
 
-    //
     private void runBelt(double speed){
-        IF.setPower(speed);
         IS.setPower(speed);
     }
 
@@ -250,7 +303,7 @@ public class CloseBlue extends OpMode {
     }
 
     public void shootClose(int nextState){
-        shooter.shoot(1525);
+        shooter.shoot(140);
 
 //        if (shootTimer.milliseconds() > 1200) {
 //            shooter.gateOpen();

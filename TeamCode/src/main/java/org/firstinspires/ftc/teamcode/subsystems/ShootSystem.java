@@ -14,7 +14,7 @@ public class ShootSystem {
     public DcMotorEx flywheelLeft;
     public DcMotorEx flywheelRight;
 
-    private DcMotor intakeFront;
+
     private DcMotor intakeSide;
     private DcMotor leftServo;
     private DcMotor rightServo;
@@ -33,7 +33,7 @@ public class ShootSystem {
         this.fol = follower;
         flywheelLeft = hardwareMap.get(DcMotorEx.class, "SR");
         flywheelRight = hardwareMap.get(DcMotorEx.class, "SL");
-        intakeFront = hardwareMap.get(DcMotor.class, "IF");
+
         intakeSide = hardwareMap.get(DcMotor.class, "IS");
 
         flipR = hardwareMap.get(Servo.class, "flipR");
@@ -47,7 +47,6 @@ public class ShootSystem {
         flywheelLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
         flywheelRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        intakeFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         intakeSide.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         flywheelLeft.setDirection(DcMotorEx.Direction.REVERSE);
@@ -87,37 +86,35 @@ public class ShootSystem {
 
 
 
-        public double VELO_TOLERANCE = 60;
+    public double VELO_TOLERANCE = 60;
 
 
-        public void shoot(double targetTPS) {
+    public void shoot(double targetTPS) {
 
-            // Run the feedback/feedforward control loop
-            updateFlywheelControl(targetTPS);
+        // Run the feedback/feedforward control loop
+        updateFlywheelControl(targetTPS);
 
-            // Check if we are at the correct speed
-            double currentTPS = (flywheelLeft.getVelocity() + flywheelRight.getVelocity()) / 2.0;
-
-
+        // Check if we are at the correct speed
+        double currentTPS = (flywheelLeft.getVelocity() + flywheelRight.getVelocity()) / 2.0;
 
 
 
-        }
 
 
-        public void spinUp(double targetTPS) {
-            updateFlywheelControl(targetTPS);
-        }
+    }
+
+
+    public void spinUp(double targetTPS) {
+        updateFlywheelControl(targetTPS);
+    }
 
 
 
     public void RunBelt(double speed) {
         intakeSide.setPower(speed);
-        intakeFront.setPower(speed);
     }
 
     public void stopBelt(){
-        intakeFront.setPower(0);
         intakeSide.setPower(0);
     }
 

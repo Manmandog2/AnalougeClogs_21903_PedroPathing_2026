@@ -37,7 +37,6 @@ public class DuoJohnCubed extends LinearOpMode {
         BL = hardwareMap.get(DcMotor.class, "BL");
         FR = hardwareMap.get(DcMotor.class, "FR");
         BR = hardwareMap.get(DcMotor.class, "BR");
-        IF = hardwareMap.get(DcMotor.class, "IF");
         IS = hardwareMap.get(DcMotor.class, "IS");
         SL = hardwareMap.get(DcMotor.class, "SL");
         SR = hardwareMap.get(DcMotor.class, "SR");
@@ -56,7 +55,6 @@ public class DuoJohnCubed extends LinearOpMode {
         BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        IF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         IS.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         SL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         SR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -121,8 +119,8 @@ public class DuoJohnCubed extends LinearOpMode {
             SR.setPower(0);
         }
         if (gamepad2.dpad_left) {
-            SL.setPower(0.75);
-            SR.setPower(-0.75);
+            SL.setPower(0.69);
+            SR.setPower(-0.69);
         }
         if (gamepad2.dpad_right) {
             SL.setPower(0.36);
@@ -135,26 +133,13 @@ public class DuoJohnCubed extends LinearOpMode {
      */
     private void intake() {
         if (0 < gamepad1.right_trigger || 0 < gamepad2.right_trigger) {
-            IF.setPower(1);
             IS.setPower(1);
         } else if (0 < gamepad1.left_trigger || 0 < gamepad2.left_trigger) {
-            IF.setPower(-1);
             IS.setPower(-1);
         } else {
-            IF.setPower(0);
             IS.setPower(0);
         }
 
-//        if (0 < gamepad2.right_trigger) {
-//            IF.setPower(1);
-//            IS.setPower(1);
-//        } else if (0 < gamepad2.left_trigger) {
-//            IF.setPower(-1);
-//            IS.setPower(-1);
-//        } else {
-//            IF.setPower(0);
-//            IS.setPower(0);
-//        }
 
     }
 }

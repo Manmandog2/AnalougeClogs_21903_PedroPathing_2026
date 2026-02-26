@@ -17,38 +17,49 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelLogic;
+import org.firstinspires.ftc.teamcode.subsystems.ShootSystem;
 
 
 @Autonomous(name = "FarRed", group = "autonomous")
 public class FarRed extends OpMode {
 
     private Follower fol;
-    private int pathState; // Current path #
-
-    private void setPathState(int num) {
-        pathState = num;
-
-    }
-
     private Timer pathTimer, opmodeTimer; // Game timer
 
+    // flywheel setup
 
-    private final Pose startPose = new Pose(80, 8, Math.toRadians(90));
-    private final Pose preScorePose = new Pose(85, 24, Math.toRadians(75));
-    private final Pose row1Line = new Pose(135, 24, Math.toRadians(275));
-    private final Pose row1Grab = new Pose(135, 9, Math.toRadians(275));
+    private ShootSystem shooter;
+    private boolean shotstriggered = false;
 
-    private final Pose row1Score = new Pose(95, 98, Math.toRadians(223));
-    private final Pose row2Line = new Pose(97, 60, Math.toRadians(0));
-    private final Pose row2Grab = new Pose(128, 60, Math.toRadians(356));
-    private final Pose row2Score = new Pose(95, 98, Math.toRadians(222));
 
-    private final Pose parkPose = new Pose(84, 33, Math.toRadians(75));
+
+    private int pathState; // Current path #
+    private void setPathState(int num){
+        pathState = num;
+    }
+
+    private int chainNum;
+    private int ballNum = 3;
+    private int shootPos = 1;
+
+
+    private final Pose startPose = new Pose(56, 8, Math.toRadians(90)).mirror();
+    private final Pose preScorePose = new Pose(59, 21, Math.toRadians(112)).mirror();
+
+    private final Pose row1Line = new Pose(8, 25, Math.toRadians(270));
+    private final Pose row1Grab = new Pose(9, 9, Math.toRadians(270));
+    private final Pose row1Score = new Pose(59, 21, Math.toRadians(112));
+
+    private final Pose cornerLine = new Pose(11, 24, Math.toRadians(250)).mirror();
+    private final Pose cornerGrab = new Pose(9, 9, Math.toRadians(270)).mirror();
+    private final Pose cornerScore = new Pose(48, 97, Math.toRadians(320)).mirror();
+
+    private final Pose parkPose = new Pose(59, 21, Math.toRadians(112)).mirror();
 
 
     private DcMotorEx SR;
     private DcMotorEx SL;
-    private DcMotor IF;
     private DcMotor IS;
 
     private Servo flipL;
@@ -61,16 +72,18 @@ public class FarRed extends OpMode {
     private double downPos = 0.59;
 
     // TIMER VARS
-    private ElapsedTime feedTimer;
+    private ElapsedTime shootTimer;
     private double intakeDur = 600;
 
-    private ElapsedTime botTimer = new ElapsedTime();
+
+
+
     private double botDur = 1650;
     private boolean firing = false;
     private boolean doneShooting;
 
 
-    private PathChain pathPreScore, pathRow1Line, pathRow1Grab, pathRow1Score, pathRow2Line, pathRow2Grab, pathRow2Score, pathParkPose;
+    private PathChain pathPreScore, pathRow1Line, pathRow1Grab, pathRow1Score, pathParkPose, pathcornerLine, pathcornerGrab, pathcornerScore;
 
 
     @Override
@@ -81,7 +94,6 @@ public class FarRed extends OpMode {
 
         SL = hardwareMap.get(DcMotorEx.class, "SL");
         SR = hardwareMap.get(DcMotorEx.class, "SR");
-        IF = hardwareMap.get(DcMotor.class, "IF");
         IS = hardwareMap.get(DcMotor.class, "IS");
 
         flipL = hardwareMap.get(Servo.class, "flipL");
@@ -100,12 +112,6 @@ public class FarRed extends OpMode {
         SR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         SR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        MotorConfigurationType configIF = IF.getMotorType().clone();
-        configIF.setAchieveableMaxRPMFraction(1.0);
-        IF.setMotorType(configIF);
-        IF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        IF.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
         MotorConfigurationType configIS = IS.getMotorType().clone();
         configIS.setAchieveableMaxRPMFraction(1.0);
         IS.setMotorType(configIS);
@@ -116,9 +122,9 @@ public class FarRed extends OpMode {
 //        Floor.scaleRange(upPos, downPos);
 //        Floor.setPosition(.59);
 
-
+        shooter = new ShootSystem(hardwareMap, telemetry, fol);
         // TIMER INIT
-        feedTimer = new ElapsedTime();
+        shootTimer = new ElapsedTime();
 
         // PATH INIT
         pathTimer = new Timer();
@@ -126,104 +132,69 @@ public class FarRed extends OpMode {
         opmodeTimer.resetTimer();
 
 
-        buildPaths(0);
+        buildPaths();
         setPathState(1);
 
     }
 
 
-    @Override
-    public void loop() {
-
-
-        fol.update();
-        autonomousPathUpdate();
-
-        Pose finalPose = fol.getPose();
-
-
-    }
-
-
-    public void buildPaths(int obNum) {
+    public void buildPaths() {
 
         pathPreScore = fol.pathBuilder()
                 .addPath(new BezierLine(startPose, preScorePose))
                 .setLinearHeadingInterpolation(startPose.getHeading(), preScorePose.getHeading())
                 .build();
 
-        pathRow1Line = fol.pathBuilder()
-                .addPath(new BezierLine(preScorePose, row1Line))
+        pathcornerLine = fol.pathBuilder()
+                .addPath(new BezierCurve(preScorePose, cornerLine))
                 .setLinearHeadingInterpolation(preScorePose.getHeading(), row1Line.getHeading())
                 //.setTangentHeadingInterpolation()
                 .build();
 
-        pathRow1Grab = fol.pathBuilder()
-                .addPath(new BezierLine(row1Line, row1Grab))
+        pathcornerGrab = fol.pathBuilder()
+                .addPath(new BezierLine(cornerLine, cornerGrab))
                 .setLinearHeadingInterpolation(row1Line.getHeading(), row1Grab.getHeading())
                 .build();
 
-        pathRow1Score = fol.pathBuilder()
-                .addPath(new BezierLine(row1Grab, row1Score))
+
+        pathcornerScore = fol.pathBuilder()
+                .addPath(new BezierCurve(cornerGrab, cornerScore))
                 .setLinearHeadingInterpolation(row1Grab.getHeading(), row1Score.getHeading())
                 .build();
 
-        pathRow2Line = fol.pathBuilder()
-                .addPath(new BezierLine(row1Score, row2Line))
-                .setLinearHeadingInterpolation(row1Score.getHeading(), row2Line.getHeading())
-                .build();
 
-        pathRow2Grab = fol.pathBuilder()
-                .addPath(new BezierLine(row2Line, row2Grab))
-                .setLinearHeadingInterpolation(row2Line.getHeading(), row2Grab.getHeading())
-                .build();
-
-        pathRow2Score = fol.pathBuilder()
-                .addPath(new BezierLine(row2Grab, row2Score))
-                .setLinearHeadingInterpolation(row2Grab.getHeading(), row2Score.getHeading())
-                .build();
 
         pathParkPose = fol.pathBuilder()
-                .addPath(new BezierLine(row2Score, parkPose))
-                .setLinearHeadingInterpolation(row2Score.getHeading(), parkPose.getHeading())
+                .addPath(new BezierLine(cornerScore, parkPose))
+                .setLinearHeadingInterpolation(row1Grab.getHeading(), parkPose.getHeading())
                 .build();
 
     }
 
 
     public void autonomousPathUpdate() {
-
         switch (pathState) {
-
             case 1:
+                fol.followPath(pathPreScore);
+                fol.setMaxPower(1);
+                setPathState(100);
+                break;
+
+            case 100:
                 if (!fol.isBusy()) {
-                    fol.followPath(pathPreScore);
-                    shootBall(.37);
-                    fol.setMaxPower(1);
+                    shootTimer.reset();
                     setPathState(2);
                 }
                 break;
 
             case 2:
-                if (!fol.isBusy()) {
-                    runBelt(.5);
-                    botTimer.reset();
-                    ballSequence(3);
-
-                    if (doneShooting) {
-                        shootBall(0);
-                        runBelt(0);
-                        if (!fol.isBusy() && !SL.isBusy())
-                            setPathState(3);
-                    }
-                }
+                shootFar(3);
                 break;
 
 
-
             case 3:
-                if (!fol.isBusy() && pathState == 3) {
-                    fol.followPath(pathRow1Line);
+                if (!fol.isBusy()) {
+                    fol.followPath(pathcornerLine);
                     setPathState(4);
                 }
                 break;
@@ -231,99 +202,115 @@ public class FarRed extends OpMode {
 
             case 4:
                 if (!fol.isBusy()) {
-                    runBelt(.42);
-                    fol.setMaxPower(.485);
-                    fol.followPath(pathRow1Grab);
-                    setPathState(5);
-                    shootBall(.37);
-
-
+                    runBelt(.75);
+                    fol.setMaxPower(.5);
+                    fol.followPath(pathcornerGrab);
+                    setPathState(50);
                 }
                 break;
 
+            case 50:
+                if (!fol.isBusy()) {
+                    runBelt(0);
+                    fol.setMaxPower(.8);
+                    fol.followPath(pathcornerScore);
+                    setPathState(60);
+                }
+                break;
+
+            case 60:
+                if (!fol.isBusy()) {
+                    shootTimer.reset();
+                    setPathState(20);
+                }
+                break;
+
+            case 20:
+                shootFar(5);
+                break;
 
             case 5:
-                if (!fol.isBusy()){
+                if (!fol.isBusy()) {
                     fol.setMaxPower(1);
                     runBelt(0);
-                    fol.followPath(pathRow1Score);
+                    fol.followPath(pathParkPose);
                     setPathState(6);
                 }
                 break;
 
-
-            case 6:
-                if (!fol.isBusy()) {
-                    runBelt(.7);
-                    botTimer.reset();
-                    ballSequence(3);
-
-                    if (doneShooting) {
-                        setPathState(7);
-                        shootBall(0);
-                        runBelt(0);
-                        if (!fol.isBusy() && !SL.isBusy());
-
-                    }
-                }
-                break;
-
-
-            case 7:
-                if (!fol.isBusy() && pathState == 7){
-                    fol.followPath(pathParkPose);
-                    setPathState(8);
-                }
-                break;
-
-
         }
 
     }
 
 
 
-    private void ballSequence(int count){
-        botTimer.reset();
-        while (botTimer.milliseconds() < botDur){}
-        for (int i = 0; i < count; i++) {
-            if (!firing) fireBall();
-        }
-        doneShooting = true;
-    }
-
-    private void fireBall(){
-        firing = true;
-        botTimer.reset();
-        while (botTimer.milliseconds() < botDur){
-            floorUp();
-        }
-        botTimer.reset();
-        while (botTimer.milliseconds() < botDur){
-            floorDown();
-        }
-        firing = false;
-    }
-
+    //
     private void runBelt(double speed){
-        IF.setPower(speed);
         IS.setPower(speed);
     }
 
-    private void shootBall(double speed){
-        SL.setPower(-speed);
-        SR.setPower(speed);
+    @Override
+    public void loop() {
+
+        fol.update();
+        autonomousPathUpdate();
+
+
     }
 
-    private void floorUp(){
-        flipL.setPosition(.56);
-        flipR.setPosition(.48);
+    public void shootFar(int nextState){
+        shooter.shoot(500);
+
+//        if (shootTimer.milliseconds() > 1200) {
+//            shooter.gateOpen();
+//        } else {
+//            shooter.gateClose();
+//        }
+
+//        if (shootTimer.milliseconds() < 500) {
+//            shooter.stopBelt();
+//        }
+
+
+        if (Math.abs(shooter.flywheelRight.getVelocity()) >= 1500 || shootTimer.milliseconds() > 1200) {
+            shooter.gateOpen();
+            shooter.RunBelt(0.12);
+        }
+
+        if (shootTimer.milliseconds() > 4000) {
+            shooter.StopMotors();
+            shooter.gateClose();
+            setPathState(nextState);
+        }
     }
 
-    private void floorDown(){
-        flipL.setPosition(.2);
-        flipR.setPosition(.2);
-    }
-
+//    private void shoot(int nextState) {
+//        // updates and sets motors to power
+//        shooter.Shoot();
+//
+//        if (shootTimer.milliseconds() > 900) {
+//            shooter.feeder.setPosition(FeedBackShootSystem.closePos);
+//        } else {
+//            shooter.feeder.setPosition(FeedBackShootSystem.openPos);
+//        }
+//
+//        // lets the flywheel spin up for a bit might need to make bigger
+//        if (shootTimer.milliseconds() < 500) {
+//            shooter.stopBelt();
+//        }
+//
+//        // after that checks if the flywheel is at the velocity or if we have spun for over 3 seconds
+//        else if (Math.abs(shooter.shootVel - shooter.flywheel.getVelocity()) < 50 || shootTimer.milliseconds() > 700) {
+//            shooter.RunBelt(0.8);
+//
+//        }
+//
+//        // After 4 seconds stop everything and move to the next path state incase sum gets messed up
+//        if (shootTimer.milliseconds() > 1900) {
+//            shooter.StopMotors();
+//            shooter.feeder.setPosition(FeedBackShootSystem.openPos);
+//            setPathState(nextState);
+//        }
+//    }
 
 }
